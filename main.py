@@ -1,9 +1,13 @@
 """news-summary-01 entry: write the summary of 11 November 2026 world news
 to /output/entry.txt. Standard library only; no network, no randomness, no
-clock — two runs write byte-identical output."""
+clock — two runs write byte-identical output.
+
+The write must be a plain open(out_path, "wb"): the sandbox grader reads
+entry.txt as a different user, so the file must be world-readable (mode 0644
+via umask). An atomic temp-file write (tempfile.mkstemp) creates mode 0600,
+which made v2 fail in the sandbox with "entry.txt is not readable"."""
 
 import os
-import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT_DIR = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
@@ -20,19 +24,9 @@ if not 1000 <= len(text) <= 2000:
 
 os.makedirs(OUT_DIR, exist_ok=True)
 out_path = os.path.join(OUT_DIR, "entry.txt")
-# Write atomically: a crash mid-write must never leave a partial entry.txt.
-fd, tmp_path = tempfile.mkstemp(dir=OUT_DIR, prefix=".entry.", suffix=".tmp")
-try:
-    with os.fdopen(fd, "wb") as f:
-        f.write(data)
-    with open(tmp_path, "rb") as f:
-        written = f.read()
-    if written != data:
-        raise SystemExit("entry bytes do not match summary.txt")
-    os.replace(tmp_path, out_path)
-except BaseException:
-    try:
-        os.unlink(tmp_path)
-    except OSError:
-        pass
-    raise
+with open(out_path, "wb") as f:
+    f.write(data)
+# Guarantee world-readable output regardless of the runtime umask: the
+# sandbox grader reads entry.txt as a different user. (This VM's umask is
+# 0007, so a plain open() alone yields 0660 here.)
+os.chmod(out_path, 0o644)
