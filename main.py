@@ -11,8 +11,12 @@ OUT_DIR = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
 with open(os.path.join(HERE, "summary.txt"), "rb") as f:
     data = f.read()
 
-if not 1000 <= len(data.decode("utf-8")) <= 2000:
-    raise SystemExit("summary out of bounds (need 1000-2000 characters)")
+try:
+    text = data.decode("utf-8")
+except UnicodeDecodeError:
+    raise SystemExit("summary.txt is not valid UTF-8")
+if not 1000 <= len(text) <= 2000:
+    raise SystemExit(f"summary out of bounds: {len(text)} characters (need 1000-2000)")
 
 os.makedirs(OUT_DIR, exist_ok=True)
 out_path = os.path.join(OUT_DIR, "entry.txt")
